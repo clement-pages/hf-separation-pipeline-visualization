@@ -1,8 +1,8 @@
 ---
 title: separation pipeline visualization
 emoji: 💬
-colorFrom: green
-colorTo: orange
+colorFrom: yellow
+colorTo: green
 sdk: gradio
 sdk_version: 5.6.0
 app_file: app.py
