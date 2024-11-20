@@ -1,12 +1,7 @@
 <script lang="ts">
 	import { uploadToHuggingFace } from "@gradio/utils";
 	import { Empty } from "@gradio/atoms";
-	import {
-		ShareButton,
-		IconButton,
-		BlockLabel,
-		IconButtonWrapper
-	} from "@gradio/atoms";
+	import { ShareButton, IconButton, BlockLabel } from "@gradio/atoms";
 	import { Download, Music } from "@gradio/icons";
 	import type { I18nFormatter } from "@gradio/utils";
 	import AudioPlayer from "../player/AudioPlayer.svelte";
@@ -24,7 +19,6 @@
 	export let waveform_settings: Record<string, any>;
 	export let waveform_options: WaveformOptions;
 	export let editable = true;
-	export let loop: boolean;
 
 	const dispatch = createEventDispatcher<{
 		change: FileData;
@@ -45,14 +39,9 @@
 />
 
 {#if value !== null}
-	<IconButtonWrapper>
+	<div class="icon-buttons">
 		{#if show_download_button}
-			<DownloadLink
-				href={value.is_stream
-					? value.url?.replace("playlist.m3u8", "playlist-file")
-					: value.url}
-				download={value.orig_name || value.path}
-			>
+			<DownloadLink href={value.url} download={value.orig_name || value.path}>
 				<IconButton Icon={Download} label={i18n("common.download")} />
 			</DownloadLink>
 		{/if}
@@ -69,7 +58,7 @@
 				{value}
 			/>
 		{/if}
-	</IconButtonWrapper>
+	</div>
 
 	<AudioPlayer
 		{value}
@@ -78,14 +67,22 @@
 		{waveform_settings}
 		{waveform_options}
 		{editable}
-		{loop}
 		on:pause
 		on:play
 		on:stop
-		on:load
 	/>
 {:else}
 	<Empty size="small">
 		<Music />
 	</Empty>
 {/if}
+
+<style>
+	.icon-buttons {
+		display: flex;
+		position: absolute;
+		top: 6px;
+		right: 6px;
+		gap: var(--size-1);
+	}
+</style>

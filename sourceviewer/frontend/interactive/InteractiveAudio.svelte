@@ -1,14 +1,18 @@
 <script lang="ts">
-	import { onDestroy, createEventDispatcher, tick } from "svelte";
+	import { getContext, onDestroy, createEventDispatcher } from "svelte";
 	import { Upload, ModifyUpload } from "@gradio/upload";
-	import { prepare_files, type FileData, type Client } from "@gradio/client";
+	import {
+		upload,
+		prepare_files,
+		type FileData,
+		type upload_files
+	} from "@gradio/client";
 	import { BlockLabel } from "@gradio/atoms";
 	import { Music } from "@gradio/icons";
-	import { StreamingBar } from "@gradio/statustracker";
 	import AudioPlayer from "../player/AudioPlayer.svelte";
 
 	import type { IBlobEvent, IMediaRecorder } from "extendable-media-recorder";
-	import type { I18nFormatter } from "js/core/src/gradio_helper";
+	import type { I18nFormatter } from "js/app/src/gradio_helper";
 	import AudioRecorder from "../recorder/AudioRecorder.svelte";
 	import StreamAudio from "../streaming/StreamAudio.svelte";
 	import { SelectSource } from "@gradio/atoms";
@@ -17,7 +21,6 @@
 	export let value: null | FileData = null;
 	export let label: string;
 	export let root: string;
-	export let loop: boolean;
 	export let show_label = true;
 	export let show_download_button = false;
 	export let sources:
@@ -35,37 +38,15 @@
 	export let active_source: "microphone" | "upload";
 	export let handle_reset_value: () => void = () => {};
 	export let editable = true;
-	export let max_file_size: number | null = null;
-	export let upload: Client["upload"];
-	export let stream_handler: Client["stream"];
-	export let stream_every: number;
-	export let uploading = false;
-	export let recording = false;
 
-	let time_limit: number | null = null;
-	let stream_state: "open" | "waiting" | "closed" = "closed";
-
-	export const modify_stream: (state: "open" | "closed" | "waiting") => void = (
-		state: "open" | "closed" | "waiting"
-	) => {
-		if (state === "closed") {
-			time_limit = null;
-			stream_state = "closed";
-		} else if (state === "waiting") {
-			stream_state = "waiting";
-		} else {
-			stream_state = "open";
-		}
-	};
-
-	export const set_time_limit = (time: number): void => {
-		if (recording) time_limit = time;
-	};
+	// Needed for wasm support
+	const upload_fn = getContext<typeof upload_files>("upload_files");
 
 	$: dispatch("drag", dragging);
 
 	// TODO: make use of this
 	// export let type: "normal" | "numpy" = "normal";
+	let recording = false;
 	let recorder: IMediaRecorder;
 	let mode = "";
 	let header: Uint8Array | undefined = undefined;
@@ -73,6 +54,7 @@
 	let submit_pending_stream_on_pending_end = false;
 	let inited = false;
 
+	const STREAM_TIMESLICE = 500;
 	const NUM_HEADER_BYTES = 44;
 	let audio_chunks: Blob[] = [];
 	let module_promises: [
@@ -87,8 +69,7 @@
 		];
 	}
 
-	const is_browser = typeof window !== "undefined";
-	if (is_browser && streaming) {
+	if (streaming) {
 		get_modules();
 	}
 
@@ -107,7 +88,6 @@
 		start_recording: undefined;
 		pause_recording: undefined;
 		stop_recording: undefined;
-		close_stream: undefined;
 	}>();
 
 	const dispatch_blob = async (
@@ -117,10 +97,11 @@
 		let _audio_blob = new File(blobs, "audio.wav");
 		const val = await prepare_files([_audio_blob], event === "stream");
 		value = (
-			(await upload(val, root, undefined, max_file_size || undefined))?.filter(
+			(await upload(val, root, undefined, upload_fn))?.filter(
 				Boolean
 			) as FileData[]
 		)[0];
+
 		dispatch(event, value);
 	};
 
@@ -147,10 +128,10 @@
 			throw err;
 		}
 		if (stream == null) return;
-
 		if (streaming) {
-			const [{ MediaRecorder, register }, { connect }] =
-				await Promise.all(module_promises);
+			const [{ MediaRecorder, register }, { connect }] = await Promise.all(
+				module_promises
+			);
 			await register(await connect());
 			recorder = new MediaRecorder(stream, { mimeType: "audio/wav" });
 			recorder.addEventListener("dataavailable", handle_chunk);
@@ -159,14 +140,13 @@
 			recorder.addEventListener("dataavailable", (event) => {
 				audio_chunks.push(event.data);
 			});
+			recorder.addEventListener("stop", async () => {
+				recording = false;
+				await dispatch_blob(audio_chunks, "change");
+				await dispatch_blob(audio_chunks, "stop_recording");
+				audio_chunks = [];
+			});
 		}
-		recorder.addEventListener("stop", async () => {
-			recording = false;
-			// recorder.stop();
-			await dispatch_blob(audio_chunks, "change");
-			await dispatch_blob(audio_chunks, "stop_recording");
-			audio_chunks = [];
-		});
 		inited = true;
 	}
 
@@ -181,7 +161,6 @@
 			pending_stream.push(payload);
 		} else {
 			let blobParts = [header].concat(pending_stream, [payload]);
-			if (!recording || stream_state === "waiting") return;
 			dispatch_blob(blobParts, "stream");
 			pending_stream = [];
 		}
@@ -201,8 +180,8 @@
 		dispatch("start_recording");
 		if (!inited) await prepare_audio();
 		header = undefined;
-		if (streaming && recorder.state != "recording") {
-			recorder.start(stream_every * 1000);
+		if (streaming) {
+			recorder.start(STREAM_TIMESLICE);
 		}
 	}
 
@@ -219,14 +198,12 @@
 		dispatch("upload", detail);
 	}
 
-	async function stop(): Promise<void> {
+	function stop(): void {
 		recording = false;
 
 		if (streaming) {
-			dispatch("close_stream");
 			dispatch("stop_recording");
 			recorder.stop();
-
 			if (pending) {
 				submit_pending_stream_on_pending_end = true;
 			}
@@ -235,9 +212,6 @@
 			mode = "";
 		}
 	}
-
-	$: if (!recording && recorder) stop();
-	$: if (recording && recorder) record();
 </script>
 
 <BlockLabel
@@ -247,10 +221,9 @@
 	label={label || i18n("audio.audio")}
 />
 <div class="audio-container">
-	<StreamingBar {time_limit} />
 	{#if value === null || streaming}
 		{#if active_source === "microphone"}
-			<ModifyUpload {i18n} on:clear={clear} />
+			<ModifyUpload {i18n} on:clear={clear} absolute={true} />
 			{#if streaming}
 				<StreamAudio
 					{record}
@@ -259,14 +232,12 @@
 					{i18n}
 					{waveform_settings}
 					{waveform_options}
-					waiting={stream_state === "waiting"}
 				/>
 			{:else}
 				<AudioRecorder
 					bind:mode
 					{i18n}
 					{editable}
-					{recording}
 					{dispatch_blob}
 					{waveform_settings}
 					{waveform_options}
@@ -282,12 +253,8 @@
 				filetype="audio/aac,audio/midi,audio/mpeg,audio/ogg,audio/wav,audio/x-wav,audio/opus,audio/webm,audio/flac,audio/vnd.rn-realaudio,audio/x-ms-wma,audio/x-aiff,audio/amr,audio/*"
 				on:load={handle_load}
 				bind:dragging
-				bind:uploading
 				on:error={({ detail }) => dispatch("error", detail)}
 				{root}
-				{max_file_size}
-				{upload}
-				{stream_handler}
 			>
 				<slot />
 			</Upload>
@@ -298,6 +265,7 @@
 			on:clear={clear}
 			on:edit={() => (mode = "edit")}
 			download={show_download_button ? value.url : null}
+			absolute={true}
 		/>
 
 		<AudioPlayer
@@ -311,7 +279,6 @@
 			{trim_region_settings}
 			{handle_reset_value}
 			{editable}
-			{loop}
 			interactive
 			on:stop
 			on:play

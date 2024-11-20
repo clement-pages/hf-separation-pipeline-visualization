@@ -10,26 +10,24 @@
 		error: string;
 	}>();
 
-	$: if (typeof window !== "undefined") {
-		try {
-			let tempDevices: MediaDeviceInfo[] = [];
-			RecordPlugin.getAvailableAudioDevices().then(
-				(devices: MediaDeviceInfo[]) => {
-					micDevices = devices;
-					devices.forEach((device) => {
-						if (device.deviceId) {
-							tempDevices.push(device);
-						}
-					});
-					micDevices = tempDevices;
-				}
-			);
-		} catch (err) {
-			if (err instanceof DOMException && err.name == "NotAllowedError") {
-				dispatch("error", i18n("audio.allow_recording_access"));
+	$: try {
+		let tempDevices: MediaDeviceInfo[] = [];
+		RecordPlugin.getAvailableAudioDevices().then(
+			(devices: MediaDeviceInfo[]) => {
+				micDevices = devices;
+				devices.forEach((device) => {
+					if (device.deviceId) {
+						tempDevices.push(device);
+					}
+				});
+				micDevices = tempDevices;
 			}
-			throw err;
+		);
+	} catch (err) {
+		if (err instanceof DOMException && err.name == "NotAllowedError") {
+			dispatch("error", i18n("audio.allow_recording_access"));
 		}
+		throw err;
 	}
 </script>
 
@@ -52,9 +50,9 @@
 		height: var(--size-8);
 		background: var(--block-background-fill);
 		padding: 0px var(--spacing-xxl);
-		border-radius: var(--button-large-radius);
+		border-radius: var(--radius-full);
 		font-size: var(--text-md);
-		border: 1px solid var(--block-border-color);
+		border: 1px solid var(--neutral-400);
 		gap: var(--size-1);
 	}
 
