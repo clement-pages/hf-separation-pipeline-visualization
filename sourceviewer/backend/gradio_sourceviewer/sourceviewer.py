@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, Tuple
 
 import httpx
 import numpy as np
@@ -17,6 +17,8 @@ from gradio.components.base import Component, StreamingInput, StreamingOutput
 from gradio.data_classes import FileData
 from gradio.events import Events
 from gradio.exceptions import Error
+
+from pyannote.core.annotation import Annotation
 
 
 @dataclasses.dataclass
@@ -40,6 +42,13 @@ class WaveformOptions:
     show_controls: bool = False
     skip_length: int | float = 5
     sample_rate: int = 44100
+
+
+@dataclasses.dataclass
+class Segment:
+    start: float
+    end: float
+    channel: int
 
 
 class SourceViewer(
@@ -239,7 +248,7 @@ class SourceViewer(
             )
 
     def postprocess(
-        self, value: str | Path | bytes | tuple[int, np.ndarray] | None
+        self, value: Tuple[Annotation, np.ndarray] | None
     ) -> FileData | bytes | None:
         """
         Parameters:
@@ -247,28 +256,33 @@ class SourceViewer(
         Returns:
             FileData object, bytes, or None.
         """
-        orig_name = None
         if value is None:
             return None
-        if isinstance(value, bytes):
-            if self.streaming:
-                return value
-            file_path = processing_utils.save_bytes_to_cache(
-                value, "audio", cache_dir=self.GRADIO_CACHE
+
+        annotations, sources = value
+        labels = annotations.labels()
+
+        # format diarization output
+        segments = []
+        for segment, _, label in annotations.itertracks(yield_label=True):
+            label_idx = labels.index(label)
+            segments.append(
+                Segment(start=segment.start, end=segment.end, channel=label_idx)
             )
-            orig_name = Path(file_path).name
-        elif isinstance(value, tuple):
-            sample_rate, data = value
-            file_path = processing_utils.save_audio_to_cache(
-                data, sample_rate, format=self.format, cache_dir=self.GRADIO_CACHE
-            )
-            orig_name = Path(file_path).name
-        else:
-            if not isinstance(value, (str, Path)):
-                raise ValueError(f"Cannot process {value} as SourceViewer")
-            file_path = str(value)
-            orig_name = Path(file_path).name if Path(file_path).exists() else None
-        return FileData(path=file_path, orig_name=orig_name)
+
+        # save sources in cache
+        source_filepath = processing_utils.save_audio_to_cache(
+            data=sources.data,
+            sample_rate=16_000,
+            format=self.format,
+            cache_dir=self.GRADIO_CACHE,
+        )
+        orig_name = Path(source_filepath).name
+
+        return {
+            "segments": segments,
+            "sources_file": FileData(path=source_filepath, orig_name=orig_name),
+        }
 
     def stream_output(
         self, value, output_id: str, first_chunk: bool
