@@ -3,17 +3,19 @@
 	import { Music } from "@gradio/icons";
 	import { format_time, type I18nFormatter } from "@gradio/utils";
 	import WaveSurfer from "wavesurfer.js";
+	import RegionsPlugin, {type Region} from "wavesurfer.js/dist/plugins/regions";
 	import { skip_audio, process_audio } from "../shared/utils";
 	import WaveformControls from "../shared/WaveformControls.svelte";
 	import { Empty } from "@gradio/atoms";
 	import { resolve_wasm_src } from "@gradio/wasm/svelte";
 	import type { FileData } from "@gradio/client";
-	import type { WaveformOptions } from "../shared/types";
+	import type { WaveformOptions, Segment } from "../shared/types";
 	import { createEventDispatcher } from "svelte";
 
-	export let value: null | FileData = null;
-	$: url = value?.url;
+	export let value: null | {"segments": Segment[], "sources_file": FileData}= null;
+	$: url = value?.sources_file.url;
 	export let label: string;
+	export let root: string;
 	export let i18n: I18nFormatter;
 	export let dispatch_blob: (
 		blobs: Uint8Array[] | Blob[],
@@ -21,7 +23,6 @@
 	) => Promise<void> = () => Promise.resolve();
 	export let interactive = false;
 	export let editable = true;
-	export let trim_region_settings = {};
 	export let waveform_settings: Record<string, any>;
 	export let waveform_options: WaveformOptions;
 	export let mode = "";
@@ -29,11 +30,14 @@
 
 	let container: HTMLDivElement;
 	let waveform: WaveSurfer | undefined;
+	let wsRegion: RegionsPlugin | undefined;
 	let playing = false;
 
 	let timeRef: HTMLTimeElement;
 	let durationRef: HTMLTimeElement;
 	let audio_duration: number;
+
+	let colors: string[] = ["red", "green", "blue", "yellow", "magenta", "cyan"];
 
 	let trimDuration = 0;
 
@@ -52,11 +56,7 @@
 			container: container,
 			...waveform_settings
 		});
-		resolve_wasm_src(value?.url).then((resolved_src) => {
-			if (resolved_src && waveform) {
-				return waveform.load(resolved_src);
-			}
-		});
+		waveform.load(root + `/file=${value.sources_file.path}`)
 	};
 
 	$: if (container !== undefined) {
@@ -69,6 +69,23 @@
 	$: waveform?.on("decode", (duration: any) => {
 		audio_duration = duration;
 		durationRef && (durationRef.textContent = format_time(duration));
+
+		if(!wsRegion){
+			wsRegion = waveform.registerPlugin(RegionsPlugin.create())
+			value.segments.forEach(segment => {
+				const region = wsRegion.addRegion({
+					start: segment.start,
+					end: segment.end,
+					channelIdx: segment.channel,
+					drag: false,
+					resize: false,
+					color: colors[segment.channel % colors.length],
+				});
+				console.log(region.color)
+				const regionHeight = 100 / waveform.getDecodedData().numberOfChannels;
+				region.element.style.cssText += `height: ${regionHeight}% !important;`
+			});
+		}
 	});
 
 	$: waveform?.on(
@@ -120,7 +137,7 @@
 
 	async function load_audio(data: string): Promise<void> {
 		await resolve_wasm_src(data).then((resolved_src) => {
-			if (!resolved_src || value?.is_stream) return;
+			if (!resolved_src || value?.sources_file.is_stream) return;
 			return waveform?.load(resolved_src);
 		});
 	}
@@ -143,10 +160,10 @@
 	<Empty size="small">
 		<Music />
 	</Empty>
-{:else if value.is_stream}
+{:else if value.sources_file.is_stream}
 	<audio
 		class="standard-player"
-		src={value.url}
+		src={value.sources_file.url}
 		controls
 		autoplay={waveform_settings.autoplay}
 	/>
@@ -171,20 +188,17 @@
 
 		{#if waveform}
 			<WaveformControls
-				{container}
 				{waveform}
 				{playing}
 				{audio_duration}
 				{i18n}
 				{interactive}
-				{handle_trim_audio}
 				bind:mode
 				bind:trimDuration
 				bind:show_volume_slider
 				show_redo={interactive}
 				{handle_reset_value}
 				{waveform_options}
-				{trim_region_settings}
 				{editable}
 			/>
 		{/if}

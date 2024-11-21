@@ -18,7 +18,7 @@
 	import { SelectSource } from "@gradio/atoms";
 	import type { WaveformOptions } from "../shared/types";
 
-	export let value: null | FileData = null;
+	export let value: null | {"segments": Segment[], "sources_file": FileData} = null;
 	export let label: string;
 	export let root: string;
 	export let show_label = true;
@@ -32,7 +32,6 @@
 	export let streaming = false;
 	export let i18n: I18nFormatter;
 	export let waveform_settings: Record<string, any>;
-	export let trim_region_settings = {};
 	export let waveform_options: WaveformOptions = {};
 	export let dragging: boolean;
 	export let active_source: "microphone" | "upload";
@@ -74,7 +73,7 @@
 	}
 
 	const dispatch = createEventDispatcher<{
-		change: FileData | null;
+		change: typeof value;
 		stream: FileData;
 		edit: never;
 		play: never;
@@ -96,7 +95,7 @@
 	): Promise<void> => {
 		let _audio_blob = new File(blobs, "audio.wav");
 		const val = await prepare_files([_audio_blob], event === "stream");
-		value = (
+		value.sources_file = (
 			(await upload(val, root, undefined, upload_fn))?.filter(
 				Boolean
 			) as FileData[]
@@ -193,8 +192,9 @@
 	}
 
 	function handle_load({ detail }: { detail: FileData }): void {
-		value = detail;
-		dispatch("change", detail);
+		value = {"segments": [], "sources_file": null}
+		value.sources_file = detail;
+		dispatch("change", value);
 		dispatch("upload", detail);
 	}
 
@@ -264,7 +264,7 @@
 			{i18n}
 			on:clear={clear}
 			on:edit={() => (mode = "edit")}
-			download={show_download_button ? value.url : null}
+			download={show_download_button ? value.sources_file.url : null}
 			absolute={true}
 		/>
 
@@ -272,11 +272,11 @@
 			bind:mode
 			{value}
 			{label}
+			{root}
 			{i18n}
 			{dispatch_blob}
 			{waveform_settings}
 			{waveform_options}
-			{trim_region_settings}
 			{handle_reset_value}
 			{editable}
 			interactive

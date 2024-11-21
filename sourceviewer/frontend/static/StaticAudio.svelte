@@ -8,10 +8,11 @@
 	import { createEventDispatcher } from "svelte";
 	import type { FileData } from "@gradio/client";
 	import { DownloadLink } from "@gradio/wasm/svelte";
-	import type { WaveformOptions } from "../shared/types";
+	import type { WaveformOptions, Segment } from "../shared/types";
 
-	export let value: null | FileData = null;
+	export let value: null | {"segments": Segment[], "sources_file": FileData} = null;
 	export let label: string;
+	export let root: string;
 	export let show_label = true;
 	export let show_download_button = true;
 	export let show_share_button = false;
@@ -21,7 +22,7 @@
 	export let editable = true;
 
 	const dispatch = createEventDispatcher<{
-		change: FileData;
+		change: typeof value;
 		play: undefined;
 		pause: undefined;
 		end: undefined;
@@ -41,7 +42,7 @@
 {#if value !== null}
 	<div class="icon-buttons">
 		{#if show_download_button}
-			<DownloadLink href={value.url} download={value.orig_name || value.path}>
+			<DownloadLink href={value.sources_file.url} download={value.sources_file.orig_name || value.sources_file.path}>
 				<IconButton Icon={Download} label={i18n("common.download")} />
 			</DownloadLink>
 		{/if}
@@ -63,6 +64,7 @@
 	<AudioPlayer
 		{value}
 		{label}
+		{root}
 		{i18n}
 		{waveform_settings}
 		{waveform_options}

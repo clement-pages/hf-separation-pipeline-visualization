@@ -10,13 +10,13 @@
 	import InteractiveAudio from "./interactive/InteractiveAudio.svelte";
 	import { StatusTracker } from "@gradio/statustracker";
 	import { Block, UploadText } from "@gradio/atoms";
-	import type { WaveformOptions } from "./shared/types";
+	import type { WaveformOptions, Segment } from "./shared/types";
 
 	export let elem_id = "";
 	export let elem_classes: string[] = [];
 	export let visible = true;
 	export let interactive: boolean;
-	export let value: null | FileData = null;
+	export let value: null | {"segments": Segment[], "sources_file": FileData} = null;
 	export let sources:
 		| ["microphone"]
 		| ["upload"]
@@ -54,11 +54,11 @@
 		share: ShareData;
 	}>;
 
-	let old_value: null | FileData = null;
+	let old_value: null | {"segments": Segment[], "sources_file": FileData} = null;
 
 	let active_source: "microphone" | "upload";
 
-	let initial_value: null | FileData = value;
+	let initial_value: null | {"segments": Segment[], "sources_file": FileData} = value;
 
 	$: if (value && initial_value === null) {
 		initial_value = value;
@@ -105,23 +105,10 @@
 		normalize: true,
 		minPxPerSec: 20,
 		mediaControls: waveform_options.show_controls,
-		sampleRate: waveform_options.sample_rate || 44100
+		sampleRate: waveform_options.sample_rate || 44100,
+		splitChannels: true,
 	};
 
-	const trim_region_settings = {
-		color: waveform_options.trim_region_color,
-		drag: true,
-		resize: true
-	};
-
-	function set_trim_region_colour(): void {
-		document.documentElement.style.setProperty(
-			"--trim-region-color",
-			trim_region_settings.color || color_accent
-		);
-	}
-
-	set_trim_region_colour();
 
 	function handle_error({ detail }: CustomEvent<string>): void {
 		const [level, status] = detail.includes("Invalid file type")
@@ -160,6 +147,7 @@
 			{show_share_button}
 			{value}
 			{label}
+			{root}
 			{waveform_settings}
 			{waveform_options}
 			{editable}
@@ -220,7 +208,6 @@
 			i18n={gradio.i18n}
 			{waveform_settings}
 			{waveform_options}
-			{trim_region_settings}
 		>
 			<UploadText i18n={gradio.i18n} type="audio" />
 		</InteractiveAudio>

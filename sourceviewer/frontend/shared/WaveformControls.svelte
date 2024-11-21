@@ -16,12 +16,9 @@
 	export let playing: boolean;
 	export let show_redo = false;
 	export let interactive = false;
-	export let handle_trim_audio: (start: number, end: number) => void;
 	export let mode = "";
-	export let container: HTMLDivElement;
 	export let handle_reset_value: () => void;
 	export let waveform_options: WaveformOptions = {};
-	export let trim_region_settings: WaveformOptions = {};
 	export let show_volume_slider = false;
 	export let editable = true;
 
@@ -30,93 +27,9 @@
 	let playbackSpeeds = [0.5, 1, 1.5, 2];
 	let playbackSpeed = playbackSpeeds[1];
 
-	let trimRegion: RegionsPlugin;
 	let activeRegion: Region | null = null;
 
-	let leftRegionHandle: HTMLDivElement | null;
-	let rightRegionHandle: HTMLDivElement | null;
-	let activeHandle = "";
-
 	let currentVolume = 1;
-
-	$: trimRegion = waveform.registerPlugin(RegionsPlugin.create());
-
-	$: trimRegion?.on("region-out", (region) => {
-		region.play();
-	});
-
-	$: trimRegion?.on("region-updated", (region) => {
-		trimDuration = region.end - region.start;
-	});
-
-	$: trimRegion?.on("region-clicked", (region, e) => {
-		e.stopPropagation(); // prevent triggering a click on the waveform
-		activeRegion = region;
-		region.play();
-	});
-
-	const addTrimRegion = (): void => {
-		activeRegion = trimRegion.addRegion({
-			start: audio_duration / 4,
-			end: audio_duration / 2,
-			...trim_region_settings
-		});
-
-		trimDuration = activeRegion.end - activeRegion.start;
-	};
-
-	$: if (activeRegion) {
-		const shadowRoot = container.children[0]!.shadowRoot!;
-
-		rightRegionHandle = shadowRoot.querySelector('[data-resize="right"]');
-		leftRegionHandle = shadowRoot.querySelector('[data-resize="left"]');
-
-		if (leftRegionHandle && rightRegionHandle) {
-			leftRegionHandle.setAttribute("role", "button");
-			rightRegionHandle.setAttribute("role", "button");
-			leftRegionHandle?.setAttribute("aria-label", "Drag to adjust start time");
-			rightRegionHandle?.setAttribute("aria-label", "Drag to adjust end time");
-			leftRegionHandle?.setAttribute("tabindex", "0");
-			rightRegionHandle?.setAttribute("tabindex", "0");
-
-			leftRegionHandle.addEventListener("focus", () => {
-				if (trimRegion) activeHandle = "left";
-			});
-
-			rightRegionHandle.addEventListener("focus", () => {
-				if (trimRegion) activeHandle = "right";
-			});
-		}
-	}
-
-	const trimAudio = (): void => {
-		if (waveform && trimRegion) {
-			if (activeRegion) {
-				const start = activeRegion.start;
-				const end = activeRegion.end;
-				handle_trim_audio(start, end);
-				mode = "";
-				activeRegion = null;
-			}
-		}
-	};
-
-	const clearRegions = (): void => {
-		trimRegion?.getRegions().forEach((region) => {
-			region.remove();
-		});
-		trimRegion?.clearRegions();
-	};
-
-	const toggleTrimmingMode = (): void => {
-		clearRegions();
-		if (mode === "edit") {
-			mode = "";
-		} else {
-			mode = "edit";
-			addTrimRegion();
-		}
-	};
 
 	const adjustRegionHandles = (handle: string, key: string): void => {
 		let newStart;
@@ -149,14 +62,6 @@
 		trimDuration = activeRegion.end - activeRegion.start;
 	};
 
-	$: trimRegion &&
-		window.addEventListener("keydown", (e) => {
-			if (e.key === "ArrowLeft") {
-				adjustRegionHandles(activeHandle, "ArrowLeft");
-			} else if (e.key === "ArrowRight") {
-				adjustRegionHandles(activeHandle, "ArrowRight");
-			}
-		});
 </script>
 
 <div class="controls" data-testid="waveform-controls">
@@ -246,26 +151,11 @@
 					aria-label="Reset audio"
 					on:click={() => {
 						handle_reset_value();
-						clearRegions();
 						mode = "";
 					}}
 				>
 					<Undo />
 				</button>
-			{/if}
-
-			{#if mode === ""}
-				<button
-					class="action icon"
-					aria-label="Trim audio to selection"
-					on:click={toggleTrimmingMode}
-				>
-					<Trim />
-				</button>
-			{:else}
-				<button class="text-button" on:click={trimAudio}>Trim</button>
-				<button class="text-button" on:click={toggleTrimmingMode}>Cancel</button
-				>
 			{/if}
 		{/if}
 	</div>
@@ -277,24 +167,6 @@
 		justify-self: self-end;
 		align-items: center;
 		grid-area: editing;
-	}
-	.text-button {
-		border: 1px solid var(--neutral-400);
-		border-radius: var(--radius-sm);
-		font-weight: 300;
-		font-size: var(--size-3);
-		text-align: center;
-		color: var(--neutral-400);
-		height: var(--size-5);
-		font-weight: bold;
-		padding: 0 5px;
-		margin-left: 5px;
-	}
-
-	.text-button:hover,
-	.text-button:focus {
-		color: var(--color-accent);
-		border-color: var(--color-accent);
 	}
 
 	.controls {
