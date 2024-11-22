@@ -7,20 +7,14 @@
 	import { skip_audio, process_audio } from "../shared/utils";
 	import WaveformControls from "../shared/WaveformControls.svelte";
 	import { Empty } from "@gradio/atoms";
-	import { resolve_wasm_src } from "@gradio/wasm/svelte";
 	import type { FileData } from "@gradio/client";
 	import type { WaveformOptions, Segment } from "../shared/types";
 	import { createEventDispatcher } from "svelte";
 
 	export let value: null | {"segments": Segment[], "sources_file": FileData}= null;
-	$: url = value?.sources_file.url;
 	export let label: string;
 	export let root: string;
 	export let i18n: I18nFormatter;
-	export let dispatch_blob: (
-		blobs: Uint8Array[] | Blob[],
-		event: "stream" | "change" | "stop_recording"
-	) => Promise<void> = () => Promise.resolve();
 	export let interactive = false;
 	export let editable = true;
 	export let waveform_settings: Record<string, any>;
@@ -39,6 +33,10 @@
 
 	let colors: string[] = ["red", "green", "blue", "yellow", "magenta", "cyan"];
 
+	let audioDecoded: boolean = false;
+	let audioContext: AudioContext | undefined;
+	let mediaNode: MediaElementAudioSourceNode | undefined;
+	let splitter: ChannelSplitterNode | undefined;
 	let trimDuration = 0;
 
 	let show_volume_slider = false;
@@ -52,11 +50,16 @@
 	}>();
 
 	const create_waveform = (): void => {
+		const audio = new Audio(root + `/file=${value.sources_file.path}`)
+		audio.crossOrigin = "anonymous"
+
+		audioContext = new AudioContext();
+
 		waveform = WaveSurfer.create({
 			container: container,
+			media: audio,
 			...waveform_settings
 		});
-		waveform.load(root + `/file=${value.sources_file.path}`)
 	};
 
 	$: if (container !== undefined) {
@@ -67,9 +70,17 @@
 	}
 
 	$: waveform?.on("decode", (duration: any) => {
+		audioDecoded = true;
+		const numChannels = waveform.getDecodedData().numberOfChannels;
 		audio_duration = duration;
 		durationRef && (durationRef.textContent = format_time(duration));
+	
+		mediaNode = audioContext.createMediaElementSource(waveform.getMediaElement() );
 
+		splitter = audioContext.createChannelSplitter(numChannels);
+		mediaNode.connect(splitter);
+
+		// add diarization annotation on each source:
 		if(!wsRegion){
 			wsRegion = waveform.registerPlugin(RegionsPlugin.create())
 			value.segments.forEach(segment => {
@@ -81,8 +92,8 @@
 					resize: false,
 					color: colors[segment.channel % colors.length],
 				});
-				console.log(region.color)
-				const regionHeight = 100 / waveform.getDecodedData().numberOfChannels;
+
+				const regionHeight = 100 / numChannels;
 				region.element.style.cssText += `height: ${regionHeight}% !important;`
 			});
 		}
@@ -114,35 +125,6 @@
 		playing = true;
 		dispatch("play");
 	});
-
-	const handle_trim_audio = async (
-		start: number,
-		end: number
-	): Promise<void> => {
-		mode = "";
-		const decodedData = waveform?.getDecodedData();
-		if (decodedData)
-			await process_audio(
-				decodedData,
-				start,
-				end,
-				waveform_settings.sampleRate
-			).then(async (trimmedBlob: Uint8Array) => {
-				await dispatch_blob([trimmedBlob], "change");
-				waveform?.destroy();
-				container.innerHTML = "";
-			});
-		dispatch("edit");
-	};
-
-	async function load_audio(data: string): Promise<void> {
-		await resolve_wasm_src(data).then((resolved_src) => {
-			if (!resolved_src || value?.sources_file.is_stream) return;
-			return waveform?.load(resolved_src);
-		});
-	}
-
-	$: url && load_audio(url);
 
 	onMount(() => {
 		window.addEventListener("keydown", (e) => {
@@ -185,6 +167,23 @@
 				<time bind:this={durationRef} id="duration">0:00</time>
 			</div>
 		</div>
+
+		{#if audioDecoded}
+			{#each [...Array(waveform.getDecodedData().numberOfChannels).keys()] as channelIdx}
+				<label>
+					<input 
+						type="radio" 
+						name="channels" 
+						value={`${channelIdx}`}
+						on:change={(ev) => {
+							splitter.disconnect()
+							splitter.connect(audioContext.destination, Number(ev.target.value), 0);
+						}}
+					/>
+					{channelIdx}
+				</label>
+			{/each}
+		{/if}
 
 		{#if waveform}
 			<WaveformControls
