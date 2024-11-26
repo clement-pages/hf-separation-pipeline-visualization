@@ -245,9 +245,8 @@
 
 	:global(::part(region)) {
 		border-radius: var(--radius-md);
-		border: 1px solid var(--trim-region-color);
+		border: none;
 		background-color: unset;
-		border-width: 1px 3px;
 	}
 
 	:global(::part(region))::after {
