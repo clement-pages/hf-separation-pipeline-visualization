@@ -31,7 +31,7 @@
 	let durationRef: HTMLTimeElement;
 	let audio_duration: number;
 
-	let colors: string[] = ["red", "green", "blue", "yellow", "magenta", "cyan"];
+	let colors: string[] = ["#f005", "#0f05", "#00f5", "#ff05", "#f0f5", "#0ff5"];
 
 	let audioDecoded: boolean = false;
 	let audioContext: AudioContext | undefined;
@@ -94,7 +94,9 @@
 				});
 
 				const regionHeight = 100 / numChannels;
-				region.element.style.cssText += `height: ${regionHeight}% !important;`
+				region.element.style.cssText += `height: ${regionHeight}% !important;`;
+				// TODO: Can we do better than force region color ?
+				region.element.style.cssText += `background-color: ${region.color} !important;`;
 			});
 		}
 	});
