@@ -29,5 +29,8 @@
     "./example": "./Example.svelte",
     "./shared": "./shared/index.ts",
     "./package.json": "./package.json"
+  },
+  "devDependencies": {
+    "@gradio/preview": "^0.13.0"
   }
 }
