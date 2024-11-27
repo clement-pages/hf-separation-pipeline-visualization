@@ -156,36 +156,38 @@
 		class="component-wrapper"
 		data-testid={label ? "waveform-" + label : "unlabelled-audio"}
 	>
+	<div class="viewer">
+		<div class="source-selection">
+			{#if audioDecoded}
+				{#each [...Array(waveform.getDecodedData().numberOfChannels).keys()] as channelIdx}
+					<label class="source" style={`height: ${waveform_settings.height}px`}>
+						<input 
+							type="radio" 
+							name="channels" 
+							value={`${channelIdx}`}
+							on:change={(ev) => {
+								splitter.disconnect()
+								splitter.connect(audioContext.destination, Number(ev.target.value), 0);
+							}}
+						/>
+						{channelIdx}
+					</label>
+				{/each}
+			{/if}
+		</div>
 		<div class="waveform-container">
 			<div id="waveform" bind:this={container} />
-		</div>
-
-		<div class="timestamps">
-			<time bind:this={timeRef} id="time">0:00</time>
-			<div>
-				{#if mode === "edit" && trimDuration > 0}
-					<time id="trim-duration">{format_time(trimDuration)}</time>
-				{/if}
-				<time bind:this={durationRef} id="duration">0:00</time>
+			<div class="timestamps">
+				<time bind:this={timeRef} id="time">0:00</time>
+				<div>
+					{#if mode === "edit" && trimDuration > 0}
+						<time id="trim-duration">{format_time(trimDuration)}</time>
+					{/if}
+					<time bind:this={durationRef} id="duration">0:00</time>
+				</div>
 			</div>
 		</div>
-
-		{#if audioDecoded}
-			{#each [...Array(waveform.getDecodedData().numberOfChannels).keys()] as channelIdx}
-				<label>
-					<input 
-						type="radio" 
-						name="channels" 
-						value={`${channelIdx}`}
-						on:change={(ev) => {
-							splitter.disconnect()
-							splitter.connect(audioContext.destination, Number(ev.target.value), 0);
-						}}
-					/>
-					{channelIdx}
-				</label>
-			{/each}
-		{/if}
+	</div>
 
 		{#if waveform}
 			<WaveformControls
@@ -207,9 +209,40 @@
 {/if}
 
 <style>
+	input[type="radio"] {
+		appearance: none;
+		background-color: #fff;
+		margin-right: 0.5em;
+		font: inherit;
+		color: var(--neutral-400);
+		width: 1.15em;
+		height: 1.15em;
+		border: 0.15em solid var(--neutral-400);
+		border-radius: 50%;
+	}
+
+	input[type="radio"]:checked {
+		background-color: var(--color-accent);
+	}
+
 	.component-wrapper {
 		padding: var(--size-3);
 		width: 100%;
+	}
+
+	.viewer {
+		display: flex;
+	}
+
+	.source-selection {
+		display: flex;
+		flex-direction: column;
+		margin-right: 1em;
+	}
+
+	.source {
+		display: flex;
+		align-items: center;
 	}
 
 	:global(::part(wrapper)) {
@@ -238,6 +271,7 @@
 	}
 	.waveform-container {
 		display: flex;
+		flex-direction: column;
 		align-items: center;
 		justify-content: center;
 		width: var(--size-full);
