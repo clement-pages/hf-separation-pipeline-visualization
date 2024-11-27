@@ -14,7 +14,7 @@ def apply_pipeline(audio: str) -> tuple:
 with gr.Blocks() as demo:
     audio = gr.Audio(type="filepath")
     btn = gr.Button("Apply separation pipeline")
-    source_viewer = SourceViewer()
+    source_viewer = SourceViewer(interactive=False)
 
     btn.click(fn=apply_pipeline, inputs=[audio], outputs=[source_viewer])
 
