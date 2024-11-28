@@ -11,7 +11,7 @@
 	import type { WaveformOptions, Segment } from "../shared/types";
 	import { createEventDispatcher } from "svelte";
 
-	export let value: null | {"segments": Segment[], "sources_file": FileData}= null;
+	export let value: null | {"segments": Segment[], "labels": string[], "sources_file": FileData}= null;
 	export let label: string;
 	export let root: string;
 	export let i18n: I18nFormatter;
@@ -170,7 +170,7 @@
 								splitter.connect(audioContext.destination, Number(ev.target.value), 0);
 							}}
 						/>
-						{channelIdx}
+						{value.labels[channelIdx]}
 					</label>
 				{/each}
 			{/if}

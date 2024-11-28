@@ -16,9 +16,9 @@
 	import AudioRecorder from "../recorder/AudioRecorder.svelte";
 	import StreamAudio from "../streaming/StreamAudio.svelte";
 	import { SelectSource } from "@gradio/atoms";
-	import type { WaveformOptions } from "../shared/types";
+	import type { WaveformOptions, Segment } from "../shared/types";
 
-	export let value: null | {"segments": Segment[], "sources_file": FileData} = null;
+	export let value: null | {"segments": Segment[], "labels": string[], "sources_file": FileData} = null;
 	export let label: string;
 	export let root: string;
 	export let show_label = true;
@@ -192,7 +192,7 @@
 	}
 
 	function handle_load({ detail }: { detail: FileData }): void {
-		value = {"segments": [], "sources_file": null}
+		value = {"segments": [], "labels": [], "sources_file": null}
 		value.sources_file = detail;
 		dispatch("change", value);
 		dispatch("upload", detail);
@@ -274,7 +274,6 @@
 			{label}
 			{root}
 			{i18n}
-			{dispatch_blob}
 			{waveform_settings}
 			{waveform_options}
 			{handle_reset_value}

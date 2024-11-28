@@ -16,7 +16,7 @@
 	export let elem_classes: string[] = [];
 	export let visible = true;
 	export let interactive: boolean;
-	export let value: null | {"segments": Segment[], "sources_file": FileData} = null;
+	export let value: null | {"segments": Segment[], "labels" : string[], "sources_file": FileData} = null;
 	export let sources:
 		| ["microphone"]
 		| ["upload"]
@@ -54,11 +54,11 @@
 		share: ShareData;
 	}>;
 
-	let old_value: null | {"segments": Segment[], "sources_file": FileData} = null;
+	let old_value: typeof value = null;
 
 	let active_source: "microphone" | "upload";
 
-	let initial_value: null | {"segments": Segment[], "sources_file": FileData} = value;
+	let initial_value: typeof value = value;
 
 	$: if (value && initial_value === null) {
 		initial_value = value;

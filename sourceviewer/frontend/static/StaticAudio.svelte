@@ -10,7 +10,7 @@
 	import { DownloadLink } from "@gradio/wasm/svelte";
 	import type { WaveformOptions, Segment } from "../shared/types";
 
-	export let value: null | {"segments": Segment[], "sources_file": FileData} = null;
+	export let value: null | {"segments": Segment[], "labels":string[], "sources_file": FileData} = null;
 	export let label: string;
 	export let root: string;
 	export let show_label = true;

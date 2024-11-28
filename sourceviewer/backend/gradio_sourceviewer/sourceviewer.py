@@ -281,6 +281,7 @@ class SourceViewer(
 
         return {
             "segments": segments,
+            "labels": labels,
             "sources_file": FileData(path=source_filepath, orig_name=orig_name),
         }
 
