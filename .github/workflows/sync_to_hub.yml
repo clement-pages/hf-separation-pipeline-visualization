@@ -17,4 +17,4 @@ jobs:
       - name: Push to hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: git push https://clement-pages:${HF_TOKEN}@huggingface.co/spaces/clement-pages/separation-pipeline-visualization main --force
+        run: git push https://clement-pages:${HF_TOKEN}@huggingface.co/spaces/clement-pages/pyannote-speech-separation-pipeline main --force
