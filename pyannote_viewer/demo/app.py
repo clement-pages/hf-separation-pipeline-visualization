@@ -1,5 +1,5 @@
 import gradio as gr
-from gradio_sourceviewer import SourceViewer
+from pyannote_viewer import PyannoteViewer
 from pyannote.audio import Pipeline
 import os
 
@@ -14,9 +14,9 @@ def apply_pipeline(audio: str) -> tuple:
 with gr.Blocks() as demo:
     audio = gr.Audio(type="filepath")
     btn = gr.Button("Apply separation pipeline")
-    source_viewer = SourceViewer(interactive=False)
+    pyannote_viewer = PyannoteViewer(interactive=False)
 
-    btn.click(fn=apply_pipeline, inputs=[audio], outputs=[source_viewer])
+    btn.click(fn=apply_pipeline, inputs=[audio], outputs=[pyannote_viewer])
 
 
 if __name__ == "__main__":

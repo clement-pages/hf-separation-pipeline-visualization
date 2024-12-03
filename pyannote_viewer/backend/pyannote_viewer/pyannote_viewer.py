@@ -51,15 +51,16 @@ class Segment:
     channel: int
 
 
-class SourceViewer(
+class PyannoteViewer(
     StreamingInput,
     StreamingOutput,
     Component,
 ):
     """
-    Creates an audio component that can be used to upload/record audio (as an input) or display audio (as an output).
-    Demos: generate_tone, reverse_audio
-    Guides: real-time-speech-recognition
+    Creates an audio component that can be used to visualize pyannote's pipelines outputs.
+    Can only be used as an output component.
+
+    See https://github.com/pyannote/pyannote-audio for more informations about pyannote
     """
 
     EVENTS = [

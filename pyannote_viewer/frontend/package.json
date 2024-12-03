@@ -1,10 +1,10 @@
 {
-  "name": "gradio_sourceviewer",
+  "name": "pyannote-viewer",
   "version": "0.9.12",
   "description": "Gradio UI packages",
   "type": "module",
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "private": false,
   "dependencies": {
     "@gradio/atoms": "0.7.0",
