@@ -72,6 +72,7 @@
 	$: waveform?.on("decode", (duration: any) => {
 		audioDecoded = true;
 		const numChannels = waveform.getDecodedData().numberOfChannels;
+		console.log(numChannels);
 		audio_duration = duration;
 		durationRef && (durationRef.textContent = format_time(duration));
 	

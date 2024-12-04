@@ -16,7 +16,7 @@
 	export let elem_classes: string[] = [];
 	export let visible = true;
 	export let interactive: boolean;
-	export let value: null | {"segments": Segment[], "labels" : string[], "sources_file": FileData} = null;
+	export let value: null | {"segments": Segment[], "labels" : string[], "multichannel": boolean, "sources_file": FileData} = null;
 	export let sources:
 		| ["microphone"]
 		| ["upload"]
