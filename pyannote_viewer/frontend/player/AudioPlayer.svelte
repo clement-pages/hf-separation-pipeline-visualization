@@ -94,7 +94,7 @@
 					color: colors[segment.channel % colors.length],
 				});
 
-				const regionHeight = 100 / numChannels;
+				const regionHeight = 100 / (value.multichannel ? numChannels : 1);
 				region.element.style.cssText += `height: ${regionHeight}% !important;`;
 				// TODO: Can we do better than force region color ?
 				region.element.style.cssText += `background-color: ${region.color} !important;`;
