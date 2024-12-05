@@ -106,7 +106,6 @@
 		minPxPerSec: 20,
 		mediaControls: waveform_options.show_controls,
 		sampleRate: waveform_options.sample_rate || 44100,
-		splitChannels: true,
 	};
 
 

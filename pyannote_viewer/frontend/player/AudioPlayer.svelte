@@ -58,6 +58,7 @@
 		waveform = WaveSurfer.create({
 			container: container,
 			media: audio,
+			splitChannels: value.multichannel,
 			...waveform_settings
 		});
 	};
@@ -80,6 +81,10 @@
 
 		splitter = audioContext.createChannelSplitter(numChannels);
 		mediaNode.connect(splitter);
+
+		if(!value.multichannel){
+			splitter.connect(audioContext.destination, 0);
+		}
 
 		// add diarization annotation on each source:
 		if(!wsRegion){
