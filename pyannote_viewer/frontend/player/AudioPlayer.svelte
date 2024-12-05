@@ -3,15 +3,14 @@
 	import { Music } from "@gradio/icons";
 	import { format_time, type I18nFormatter } from "@gradio/utils";
 	import WaveSurfer from "wavesurfer.js";
-	import RegionsPlugin, {type Region} from "wavesurfer.js/dist/plugins/regions";
-	import { skip_audio, process_audio } from "../shared/utils";
+	import RegionsPlugin from "wavesurfer.js/dist/plugins/regions";
+	import { skip_audio } from "../shared/utils";
 	import WaveformControls from "../shared/WaveformControls.svelte";
 	import { Empty } from "@gradio/atoms";
-	import type { FileData } from "@gradio/client";
-	import type { WaveformOptions, Segment } from "../shared/types";
+	import type { WaveformOptions, PipelineOutput } from "../shared/types";
 	import { createEventDispatcher } from "svelte";
 
-	export let value: null | {"segments": Segment[], "labels": string[], "sources_file": FileData}= null;
+	export let value: PipelineOutput | null = null;
 	export let label: string;
 	export let root: string;
 	export let i18n: I18nFormatter;
@@ -50,7 +49,7 @@
 	}>();
 
 	const create_waveform = (): void => {
-		const audio = new Audio(root + `/file=${value.sources_file.path}`)
+		const audio = new Audio(root + `/file=${value.audio_file.path}`)
 		audio.crossOrigin = "anonymous"
 
 		audioContext = new AudioContext();
@@ -145,10 +144,10 @@
 	<Empty size="small">
 		<Music />
 	</Empty>
-{:else if value.sources_file.is_stream}
+{:else if value.audio_file.is_stream}
 	<audio
 		class="standard-player"
-		src={value.sources_file.url}
+		src={value.audio_file.url}
 		controls
 		autoplay={waveform_settings.autoplay}
 	/>

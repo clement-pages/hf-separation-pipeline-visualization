@@ -1,3 +1,5 @@
+import type { FileData } from "@gradio/client";
+
 export type WaveformOptions = {
 	waveform_color?: string;
 	waveform_progress_color?: string;
@@ -12,4 +14,11 @@ export type Segment = {
 	start: number;
 	end: number;
 	channel: number;
+}
+
+export type PipelineOutput = {
+	segments: Segment[];
+	labels: string[];
+	multichannel: boolean;
+	audio_file: FileData;
 }

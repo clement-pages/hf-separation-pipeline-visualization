@@ -295,7 +295,7 @@ class PyannoteViewer(
             "segments": segments,
             "labels": labels,
             "multichannel": multichannel,
-            "sources_file": FileData(path=audio_filepath, orig_name=orig_name),
+            "audio_file": FileData(path=audio_filepath, orig_name=orig_name),
         }
 
     def stream_output(
