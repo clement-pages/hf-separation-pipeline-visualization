@@ -1,6 +1,6 @@
 asteroid==0.7.0
 fastapi==0.112.4
-gradio-sourceviewer==1.0.0
+pyannote-viewer==1.0.0
 pyannote-audio==3.3.2
 spaces==0.30.2
 transformers==4.46.3

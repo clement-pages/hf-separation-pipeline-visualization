@@ -10,13 +10,13 @@
 	import InteractiveAudio from "./interactive/InteractiveAudio.svelte";
 	import { StatusTracker } from "@gradio/statustracker";
 	import { Block, UploadText } from "@gradio/atoms";
-	import type { WaveformOptions, Segment } from "./shared/types";
+	import type { WaveformOptions, PipelineOutput } from "./shared/types";
 
 	export let elem_id = "";
 	export let elem_classes: string[] = [];
 	export let visible = true;
 	export let interactive: boolean;
-	export let value: null | {"segments": Segment[], "labels" : string[], "sources_file": FileData} = null;
+	export let value: PipelineOutput | null = null;
 	export let sources:
 		| ["microphone"]
 		| ["upload"]
@@ -106,7 +106,6 @@
 		minPxPerSec: 20,
 		mediaControls: waveform_options.show_controls,
 		sampleRate: waveform_options.sample_rate || 44100,
-		splitChannels: true,
 	};
 
 

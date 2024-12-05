@@ -3,15 +3,15 @@
 	import { Music } from "@gradio/icons";
 	import { format_time, type I18nFormatter } from "@gradio/utils";
 	import WaveSurfer from "wavesurfer.js";
-	import RegionsPlugin, {type Region} from "wavesurfer.js/dist/plugins/regions";
-	import { skip_audio, process_audio } from "../shared/utils";
+	import RegionsPlugin from "wavesurfer.js/dist/plugins/regions";
+	import { skip_audio } from "../shared/utils";
 	import WaveformControls from "../shared/WaveformControls.svelte";
 	import { Empty } from "@gradio/atoms";
-	import type { FileData } from "@gradio/client";
-	import type { WaveformOptions, Segment } from "../shared/types";
+	import type { WaveformOptions, PipelineOutput } from "../shared/types";
 	import { createEventDispatcher } from "svelte";
+    import Color from "@gradio/icons/src/Color.svelte";
 
-	export let value: null | {"segments": Segment[], "labels": string[], "sources_file": FileData}= null;
+	export let value: PipelineOutput | null = null;
 	export let label: string;
 	export let root: string;
 	export let i18n: I18nFormatter;
@@ -50,7 +50,7 @@
 	}>();
 
 	const create_waveform = (): void => {
-		const audio = new Audio(root + `/file=${value.sources_file.path}`)
+		const audio = new Audio(root + `/file=${value.audio_file.path}`)
 		audio.crossOrigin = "anonymous"
 
 		audioContext = new AudioContext();
@@ -58,6 +58,7 @@
 		waveform = WaveSurfer.create({
 			container: container,
 			media: audio,
+			splitChannels: value.multichannel,
 			...waveform_settings
 		});
 	};
@@ -72,6 +73,7 @@
 	$: waveform?.on("decode", (duration: any) => {
 		audioDecoded = true;
 		const numChannels = waveform.getDecodedData().numberOfChannels;
+		console.log(numChannels);
 		audio_duration = duration;
 		durationRef && (durationRef.textContent = format_time(duration));
 	
@@ -80,6 +82,10 @@
 		splitter = audioContext.createChannelSplitter(numChannels);
 		mediaNode.connect(splitter);
 
+		if(!value.multichannel){
+			splitter.connect(audioContext.destination, 0);
+		}
+
 		// add diarization annotation on each source:
 		if(!wsRegion){
 			wsRegion = waveform.registerPlugin(RegionsPlugin.create())
@@ -87,13 +93,13 @@
 				const region = wsRegion.addRegion({
 					start: segment.start,
 					end: segment.end,
-					channelIdx: segment.channel,
+					channelIdx: value.multichannel ? segment.channel : 0,
 					drag: false,
 					resize: false,
 					color: colors[segment.channel % colors.length],
 				});
 
-				const regionHeight = 100 / numChannels;
+				const regionHeight = 100 / (value.multichannel ? numChannels : 1);
 				region.element.style.cssText += `height: ${regionHeight}% !important;`;
 				// TODO: Can we do better than force region color ?
 				region.element.style.cssText += `background-color: ${region.color} !important;`;
@@ -144,10 +150,10 @@
 	<Empty size="small">
 		<Music />
 	</Empty>
-{:else if value.sources_file.is_stream}
+{:else if value.audio_file.is_stream}
 	<audio
 		class="standard-player"
-		src={value.sources_file.url}
+		src={value.audio_file.url}
 		controls
 		autoplay={waveform_settings.autoplay}
 	/>
@@ -159,20 +165,30 @@
 	<div class="viewer">
 		<div class="source-selection">
 			{#if audioDecoded}
-				{#each [...Array(waveform.getDecodedData().numberOfChannels).keys()] as channelIdx}
-					<label class="source" style={`height: ${waveform_settings.height}px`}>
-						<input 
-							type="radio" 
-							name="channels" 
-							value={`${channelIdx}`}
-							on:change={(ev) => {
-								splitter.disconnect()
-								splitter.connect(audioContext.destination, Number(ev.target.value), 0);
-							}}
-						/>
-						{value.labels[channelIdx]}
-					</label>
-				{/each}
+				{#if value.multichannel}
+					<!-- Separation pipeline case -->
+					{#each [...Array(waveform.getDecodedData().numberOfChannels).keys()] as channelIdx}
+						<label style={`height: ${waveform_settings.height}px; background-color: ${colors[channelIdx % colors.length]}`}>
+							<input 
+								type="radio" 
+								name="channels" 
+								value={`${channelIdx}`}
+								on:change={(ev) => {
+									splitter.disconnect()
+									splitter.connect(audioContext.destination, Number(ev.target.value), 0);
+								}}
+							/>
+							{value.labels[channelIdx]}
+						</label>
+					{/each}
+				{:else}
+						{#each [...Array(value.labels.length)].keys() as labelIdx}
+							<label style={`background-color: ${colors[labelIdx % colors.length]};`}>
+								<input type="hidden">
+								{value.labels[labelIdx]}
+							</label>
+						{/each}
+				{/if}
 			{/if}
 		</div>
 		<div class="waveform-container">
@@ -225,6 +241,15 @@
 		background-color: var(--color-accent);
 	}
 
+	label {
+		display: flex;
+		align-items: center;
+		margin-bottom: 0.25em;
+		padding-left: 0.5em;
+		padding-right: 0.5em;
+	}
+
+
 	.component-wrapper {
 		padding: var(--size-3);
 		width: 100%;
@@ -238,11 +263,6 @@
 		display: flex;
 		flex-direction: column;
 		margin-right: 1em;
-	}
-
-	.source {
-		display: flex;
-		align-items: center;
 	}
 
 	:global(::part(wrapper)) {

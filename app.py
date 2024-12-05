@@ -2,13 +2,18 @@ import gradio as gr
 from pyannote_viewer import PyannoteViewer
 from pyannote.audio import Pipeline
 import os
+from huggingface_hub import HfApi
 
-
-def apply_pipeline(audio: str) -> tuple:
+def apply_pipeline(audio: str, pipeline_name: str) -> tuple:
     pipeline = Pipeline.from_pretrained(
-        "pyannote/speech-separation-ami-1.0", use_auth_token=os.environ["HF_TOKEN"]
+        pipeline_name, use_auth_token=os.environ["HF_TOKEN"]
     )
-    return pipeline(audio)
+
+    outputs = pipeline(audio)
+    if isinstance(outputs, tuple):
+        return outputs
+    else:
+        return (outputs, audio)
 
 
 with gr.Blocks() as demo:
@@ -22,20 +27,29 @@ with gr.Blocks() as demo:
             )
         # space title and description
         with gr.Column(scale=10):
-            gr.Markdown('# Speaker diarization and speech separation pipeline')
+            gr.Markdown('# pyannote pretrained pipelines')
     
             gr.Markdown(
-                "This space is dedicated to showing the use of the speaker diarization and speech separation [pipeline](https://huggingface.co/pyannote/speech-separation-ami-1.0) integrated to `pyannote.audio`. To use this space:"
-                "\n - Load or record an audio"
-                "\n - Click on the apply pipeline button"
-                "\n - After pipeline processed the audio, you can then listen for each speaker separetely. Annotations on waveforms correspond to the speaker diarization produced by the pipeline, with one color per speaker."
+                "You like [pyannote.audio](https://github.com/pyannote/pyannote-audio)? Consider using [pyannoteAI](https://pyannote.ai/) for better and faster options.\n"
+                "\nGo [here](https://huggingface.co/pyannote) for more detail on each pipeline available in this space."
             )
+            
+            gr.Markdown()
 
+
+    gr.Markdown("#### Select a pretrained pipeline:")
+    available_pipelines = [p.modelId for p in HfApi().list_models(filter="pyannote-audio-pipeline")]
+    available_pipelines = list(filter(lambda p: p.startswith("pyannote/"), available_pipelines))
+    dropdown = gr.Dropdown(choices=available_pipelines, value=available_pipelines[0], interactive=True, label="Pretrained pipeline")
+
+    gr.Markdown("#### Upload or record an audio:")
     audio = gr.Audio(type="filepath")
-    btn = gr.Button("Apply separation pipeline")
+
+    btn = gr.Button("Apply pipeline")
+
     source_viewer = PyannoteViewer(interactive=False)
 
-    btn.click(fn=apply_pipeline, inputs=[audio], outputs=[source_viewer])
+    btn.click(fn=apply_pipeline, inputs=[audio, dropdown], outputs=[source_viewer])
 
 
 if __name__ == "__main__":

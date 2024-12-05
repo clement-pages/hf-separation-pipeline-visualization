@@ -19,6 +19,7 @@ from gradio.events import Events
 from gradio.exceptions import Error
 
 from pyannote.core.annotation import Annotation
+from pyannote.core.feature import SlidingWindowFeature
 
 
 @dataclasses.dataclass
@@ -249,7 +250,7 @@ class PyannoteViewer(
             )
 
     def postprocess(
-        self, value: Tuple[Annotation, np.ndarray] | None
+        self, value: Tuple[Annotation, np.ndarray | Path | str] | None
     ) -> FileData | bytes | None:
         """
         Parameters:
@@ -260,7 +261,8 @@ class PyannoteViewer(
         if value is None:
             return None
 
-        annotations, sources = value
+        annotations, audio = value
+
         labels = annotations.labels()
 
         # format diarization output
@@ -271,19 +273,28 @@ class PyannoteViewer(
                 Segment(start=segment.start, end=segment.end, channel=label_idx)
             )
 
-        # save sources in cache
-        source_filepath = processing_utils.save_audio_to_cache(
-            data=sources.data,
-            sample_rate=16_000,
-            format=self.format,
-            cache_dir=self.GRADIO_CACHE,
-        )
-        orig_name = Path(source_filepath).name
+        if isinstance(audio, SlidingWindowFeature):
+            # save sources in cache
+            audio_filepath = processing_utils.save_audio_to_cache(
+                data=audio.data,
+                sample_rate=16_000,
+                format=self.format,
+                cache_dir=self.GRADIO_CACHE,
+            )
+            multichannel = True
+        elif isinstance(audio, (Path, str)):
+            audio_filepath = audio
+            multichannel = False
+        else:
+            raise ValueError("Unknown type for audio value")
+
+        orig_name = Path(audio_filepath).name
 
         return {
             "segments": segments,
             "labels": labels,
-            "sources_file": FileData(path=source_filepath, orig_name=orig_name),
+            "multichannel": multichannel,
+            "audio_file": FileData(path=audio_filepath, orig_name=orig_name),
         }
 
     def stream_output(

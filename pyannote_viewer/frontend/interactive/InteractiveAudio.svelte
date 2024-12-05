@@ -16,9 +16,9 @@
 	import AudioRecorder from "../recorder/AudioRecorder.svelte";
 	import StreamAudio from "../streaming/StreamAudio.svelte";
 	import { SelectSource } from "@gradio/atoms";
-	import type { WaveformOptions, Segment } from "../shared/types";
+	import type { WaveformOptions, PipelineOutput } from "../shared/types";
 
-	export let value: null | {"segments": Segment[], "labels": string[], "sources_file": FileData} = null;
+	export let value: PipelineOutput | null = null;
 	export let label: string;
 	export let root: string;
 	export let show_label = true;
@@ -74,7 +74,7 @@
 
 	const dispatch = createEventDispatcher<{
 		change: typeof value;
-		stream: FileData;
+		stream: typeof value;
 		edit: never;
 		play: never;
 		pause: never;
@@ -95,7 +95,7 @@
 	): Promise<void> => {
 		let _audio_blob = new File(blobs, "audio.wav");
 		const val = await prepare_files([_audio_blob], event === "stream");
-		value.sources_file = (
+		value.audio_file = (
 			(await upload(val, root, undefined, upload_fn))?.filter(
 				Boolean
 			) as FileData[]
@@ -192,8 +192,8 @@
 	}
 
 	function handle_load({ detail }: { detail: FileData }): void {
-		value = {"segments": [], "labels": [], "sources_file": null}
-		value.sources_file = detail;
+		value = {"segments": [], "labels": [], "multichannel": false, "audioFile": null}
+		value.audio_file = detail;
 		dispatch("change", value);
 		dispatch("upload", detail);
 	}
@@ -264,7 +264,7 @@
 			{i18n}
 			on:clear={clear}
 			on:edit={() => (mode = "edit")}
-			download={show_download_button ? value.sources_file.url : null}
+			download={show_download_button ? value.audio_file.url : null}
 			absolute={true}
 		/>
 

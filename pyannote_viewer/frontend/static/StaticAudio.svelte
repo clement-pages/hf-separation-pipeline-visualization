@@ -6,11 +6,10 @@
 	import type { I18nFormatter } from "@gradio/utils";
 	import AudioPlayer from "../player/AudioPlayer.svelte";
 	import { createEventDispatcher } from "svelte";
-	import type { FileData } from "@gradio/client";
 	import { DownloadLink } from "@gradio/wasm/svelte";
-	import type { WaveformOptions, Segment } from "../shared/types";
+	import type { WaveformOptions, PipelineOutput } from "../shared/types";
 
-	export let value: null | {"segments": Segment[], "labels":string[], "sources_file": FileData} = null;
+	export let value: PipelineOutput | null = null;
 	export let label: string;
 	export let root: string;
 	export let show_label = true;
@@ -42,7 +41,7 @@
 {#if value !== null}
 	<div class="icon-buttons">
 		{#if show_download_button}
-			<DownloadLink href={value.sources_file.url} download={value.sources_file.orig_name || value.sources_file.path}>
+			<DownloadLink href={value.audio_file.url} download={value.audio_file.orig_name || value.audio_file.path}>
 				<IconButton Icon={Download} label={i18n("common.download")} />
 			</DownloadLink>
 		{/if}
