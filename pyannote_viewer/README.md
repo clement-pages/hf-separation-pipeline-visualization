@@ -1,20 +1,20 @@
 
-# `gradio_sourceviewer`
+# `pyannote_viewer`
 <img alt="Static Badge" src="https://img.shields.io/badge/version%20-%201.0.0%20-%20orange">  
 
-Python library for easily interacting with trained machine learning models
+Gradio custom component to visualize pyannote's pipelines outputs
 
 ## Installation
 
 ```bash
-pip install gradio_sourceviewer
+pip install pyannote-viewer
 ```
 
 ## Usage
 
 ```python
 import gradio as gr
-from gradio_sourceviewer import SourceViewer
+from pyannote_viewer import PyannoteViewer
 from pyannote.audio import Pipeline
 import os
 
@@ -29,9 +29,9 @@ def apply_pipeline(audio: str) -> tuple:
 with gr.Blocks() as demo:
     audio = gr.Audio(type="filepath")
     btn = gr.Button("Apply separation pipeline")
-    source_viewer = SourceViewer(interactive=False)
+    pyannote_viewer = PyannoteViewer(interactive=False)
 
-    btn.click(fn=apply_pipeline, inputs=[audio], outputs=[source_viewer])
+    btn.click(fn=apply_pipeline, inputs=[audio], outputs=[pyannote_viewer])
 
 
 if __name__ == "__main__":
@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
 ```
 
-## `SourceViewer`
+## `PyannoteViewer`
 
 ### Initialization
 
@@ -362,16 +362,16 @@ WaveformOptions | dict | None
 
 | name | description |
 |:-----|:------------|
-| `stream` | This listener is triggered when the user streams the SourceViewer. |
-| `change` | Triggered when the value of the SourceViewer changes either because of user input (e.g. a user types in a textbox) OR because of a function update (e.g. an image receives a value from the output of an event trigger). See `.input()` for a listener that is only triggered by user input. |
-| `clear` | This listener is triggered when the user clears the SourceViewer using the X button for the component. |
-| `play` | This listener is triggered when the user plays the media in the SourceViewer. |
-| `pause` | This listener is triggered when the media in the SourceViewer stops for any reason. |
-| `stop` | This listener is triggered when the user reaches the end of the media playing in the SourceViewer. |
-| `start_recording` | This listener is triggered when the user starts recording with the SourceViewer. |
-| `pause_recording` | This listener is triggered when the user pauses recording with the SourceViewer. |
-| `stop_recording` | This listener is triggered when the user stops recording with the SourceViewer. |
-| `upload` | This listener is triggered when the user uploads a file into the SourceViewer. |
+| `stream` | This listener is triggered when the user streams the PyannoteViewer. |
+| `change` | Triggered when the value of the PyannoteViewer changes either because of user input (e.g. a user types in a textbox) OR because of a function update (e.g. an image receives a value from the output of an event trigger). See `.input()` for a listener that is only triggered by user input. |
+| `clear` | This listener is triggered when the user clears the PyannoteViewer using the X button for the component. |
+| `play` | This listener is triggered when the user plays the media in the PyannoteViewer. |
+| `pause` | This listener is triggered when the media in the PyannoteViewer stops for any reason. |
+| `stop` | This listener is triggered when the user reaches the end of the media playing in the PyannoteViewer. |
+| `start_recording` | This listener is triggered when the user starts recording with the PyannoteViewer. |
+| `pause_recording` | This listener is triggered when the user pauses recording with the PyannoteViewer. |
+| `stop_recording` | This listener is triggered when the user stops recording with the PyannoteViewer. |
+| `upload` | This listener is triggered when the user uploads a file into the PyannoteViewer. |
 
 
 
@@ -391,7 +391,8 @@ The code snippet below is accurate in cases where the component is used as both 
  def predict(
      value: str | tuple[int, numpy.ndarray] | None
  ) -> tuple[
-        pyannote.core.annotation.Annotation, numpy.ndarray
+        pyannote.core.annotation.Annotation,
+        numpy.ndarray | pathlib.Path | str,
     ]
     | None:
      return value
