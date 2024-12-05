@@ -9,6 +9,7 @@
 	import { Empty } from "@gradio/atoms";
 	import type { WaveformOptions, PipelineOutput } from "../shared/types";
 	import { createEventDispatcher } from "svelte";
+    import Color from "@gradio/icons/src/Color.svelte";
 
 	export let value: PipelineOutput | null = null;
 	export let label: string;
@@ -87,7 +88,7 @@
 				const region = wsRegion.addRegion({
 					start: segment.start,
 					end: segment.end,
-					channelIdx: segment.channel,
+					channelIdx: value.multichannel ? segment.channel : 0,
 					drag: false,
 					resize: false,
 					color: colors[segment.channel % colors.length],
@@ -159,20 +160,30 @@
 	<div class="viewer">
 		<div class="source-selection">
 			{#if audioDecoded}
-				{#each [...Array(waveform.getDecodedData().numberOfChannels).keys()] as channelIdx}
-					<label class="source" style={`height: ${waveform_settings.height}px`}>
-						<input 
-							type="radio" 
-							name="channels" 
-							value={`${channelIdx}`}
-							on:change={(ev) => {
-								splitter.disconnect()
-								splitter.connect(audioContext.destination, Number(ev.target.value), 0);
-							}}
-						/>
-						{value.labels[channelIdx]}
-					</label>
-				{/each}
+				{#if value.multichannel}
+					<!-- Separation pipeline case -->
+					{#each [...Array(waveform.getDecodedData().numberOfChannels).keys()] as channelIdx}
+						<label style={`height: ${waveform_settings.height}px; background-color: ${colors[channelIdx % colors.length]}`}>
+							<input 
+								type="radio" 
+								name="channels" 
+								value={`${channelIdx}`}
+								on:change={(ev) => {
+									splitter.disconnect()
+									splitter.connect(audioContext.destination, Number(ev.target.value), 0);
+								}}
+							/>
+							{value.labels[channelIdx]}
+						</label>
+					{/each}
+				{:else}
+						{#each [...Array(value.labels.length)].keys() as labelIdx}
+							<label style={`background-color: ${colors[labelIdx % colors.length]};`}>
+								<input type="hidden">
+								{value.labels[labelIdx]}
+							</label>
+						{/each}
+				{/if}
 			{/if}
 		</div>
 		<div class="waveform-container">
@@ -225,6 +236,15 @@
 		background-color: var(--color-accent);
 	}
 
+	label {
+		display: flex;
+		align-items: center;
+		margin-bottom: 0.25em;
+		padding-left: 0.5em;
+		padding-right: 0.5em;
+	}
+
+
 	.component-wrapper {
 		padding: var(--size-3);
 		width: 100%;
@@ -238,11 +258,6 @@
 		display: flex;
 		flex-direction: column;
 		margin-right: 1em;
-	}
-
-	.source {
-		display: flex;
-		align-items: center;
 	}
 
 	:global(::part(wrapper)) {

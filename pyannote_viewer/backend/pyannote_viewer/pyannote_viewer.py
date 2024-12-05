@@ -21,7 +21,6 @@ from gradio.exceptions import Error
 from pyannote.core.annotation import Annotation
 from pyannote.core.feature import SlidingWindowFeature
 
-import torchaudio
 
 @dataclasses.dataclass
 class WaveformOptions:
@@ -269,7 +268,7 @@ class PyannoteViewer(
         # format diarization output
         segments = []
         for segment, _, label in annotations.itertracks(yield_label=True):
-            label_idx = labels.index(label) if isinstance(audio, SlidingWindowFeature) else 0
+            label_idx = labels.index(label)
             segments.append(
                 Segment(start=segment.start, end=segment.end, channel=label_idx)
             )
