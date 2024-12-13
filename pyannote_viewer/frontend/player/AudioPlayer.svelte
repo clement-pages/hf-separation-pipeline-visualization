@@ -2,9 +2,9 @@
 	import { onMount } from "svelte";
 	import { Music } from "@gradio/icons";
 	import { format_time, type I18nFormatter } from "@gradio/utils";
-	import WaveSurfer from "wavesurfer.js";
-	import RegionsPlugin from "wavesurfer.js/dist/plugins/regions";
-	import { skip_audio } from "../shared/utils";
+	import WaveSurfer from "@gryannote/wavesurfer.js";
+	import RegionsPlugin, {type Region} from "@gryannote/wavesurfer.js/dist/plugins/regions";
+	import { skip_audio, process_audio } from "../shared/utils";
 	import WaveformControls from "../shared/WaveformControls.svelte";
 	import { Empty } from "@gradio/atoms";
 	import type { WaveformOptions, PipelineOutput } from "../shared/types";
@@ -73,7 +73,6 @@
 	$: waveform?.on("decode", (duration: any) => {
 		audioDecoded = true;
 		const numChannels = waveform.getDecodedData().numberOfChannels;
-		console.log(numChannels);
 		audio_duration = duration;
 		durationRef && (durationRef.textContent = format_time(duration));
 	
@@ -88,19 +87,20 @@
 
 		// add diarization annotation on each source:
 		if(!wsRegion){
-			wsRegion = waveform.registerPlugin(RegionsPlugin.create())
+			wsRegion = waveform.registerPlugin(RegionsPlugin.create({avoidOverlap:!value.multichannel}))
 			value.segments.forEach(segment => {
 				const region = wsRegion.addRegion({
 					start: segment.start,
 					end: segment.end,
-					channelIdx: value.multichannel ? segment.channel : 0,
+					channelIdx: value.multichannel ? segment.channel : -1,
 					drag: false,
 					resize: false,
 					color: colors[segment.channel % colors.length],
 				});
-
-				const regionHeight = 100 / (value.multichannel ? numChannels : 1);
-				region.element.style.cssText += `height: ${regionHeight}% !important;`;
+				if(value.multichannel){
+					const regionHeight = 100 / numChannels;
+					region.element.style.cssText += `height: ${regionHeight}% !important;`;
+				}
 				// TODO: Can we do better than force region color ?
 				region.element.style.cssText += `background-color: ${region.color} !important;`;
 			});

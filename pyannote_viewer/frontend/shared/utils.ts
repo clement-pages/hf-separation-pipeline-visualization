@@ -1,4 +1,4 @@
-import type WaveSurfer from "wavesurfer.js";
+import type WaveSurfer from "@gryannote/wavesurfer.js";
 import { audioBufferToWav } from "./audioBufferToWav";
 
 export interface LoadedParams {
