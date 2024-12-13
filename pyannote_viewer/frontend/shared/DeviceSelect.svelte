@@ -1,5 +1,5 @@
 <script lang="ts">
-	import RecordPlugin from "wavesurfer.js/dist/plugins/record.js";
+	import RecordPlugin from "@gryannote/wavesurfer.js/dist/plugins/record.js";
 	import type { I18nFormatter } from "@gradio/utils";
 	import { createEventDispatcher } from "svelte";
 
