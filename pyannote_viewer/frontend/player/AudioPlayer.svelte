@@ -170,12 +170,16 @@
 					{#each [...Array(waveform.getDecodedData().numberOfChannels).keys()] as channelIdx}
 						<label style={`height: ${waveform_settings.height}px; background-color: ${colors[channelIdx % colors.length]}`}>
 							<input 
-								type="radio" 
-								name="channels" 
+								type="checkbox" 
+								name={`${channelIdx}`} 
 								value={`${channelIdx}`}
 								on:change={(ev) => {
-									splitter.disconnect()
-									splitter.connect(audioContext.destination, Number(ev.target.value), 0);
+									const channelIdx = Number(ev.target.value);
+									if(Boolean(ev.target.checked)){
+										splitter.connect(audioContext.destination, channelIdx, 0);
+									} else {
+										splitter.disconnect(channelIdx);
+									}
 								}}
 							/>
 							{value.labels[channelIdx]}
@@ -225,7 +229,7 @@
 {/if}
 
 <style>
-	input[type="radio"] {
+	input[type="checkbox"] {
 		appearance: none;
 		background-color: #fff;
 		margin-right: 0.5em;
@@ -237,7 +241,7 @@
 		border-radius: 50%;
 	}
 
-	input[type="radio"]:checked {
+	input[type="checkbox"]:checked {
 		background-color: var(--color-accent);
 	}
 
